@@ -18,11 +18,11 @@ Bem-vindo ao repositório da Equipe 01 no DevTITANS!
 <img src="https://github.com/DevTITANS05/Hands-On-Linux-fork-/assets/21023906/85e61f3e-476c-47a4-82d5-4054e856c67b" width="180" >
 <img src="https://github.com/DevTITANS05/Hands-On-Linux-fork-/assets/21023906/85e61f3e-476c-47a4-82d5-4054e856c67b" width="180" >
 
-- **Nome do(a) Aluno(a) 01:** Papel principal do aluno(a) 1
 - **Alleck dos Santos:** Desenvolvedor AOSP
-- **Nome do(a) Aluno(a) 03:** Papel principal do aluno(a) 3
-- **Nome do(a) Aluno(a) 04:** Papel principal do aluno(a) 4
-- **Nome do(a) Aluno(a) 05:** Papel principal do aluno(a) 5
+- **André França:** Desenvolvedor AOSP
+- **Yago Campos:** Programador Firmware (ESP32)
+- **Alberth Viana:** Programador Firmware (ESP32)
+- **Luiz Henrique:** Portar o Android
 
 ## Recursos
 
