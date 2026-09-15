@@ -1,0 +1,17 @@
+../kraken/
+# Android Build Outputs & Caches
+/out/
+.out/
+.ninja_*
+*.ninja
+
+# IDE / Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
