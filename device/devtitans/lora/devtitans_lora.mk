@@ -6,3 +6,6 @@ PRODUCT_NAME := devtitans_lora
 PRODUCT_DEVICE := lora
 PRODUCT_BRAND := LowRanger
 PRODUCT_MODEL := LowRangerOne
+
+PRODUCT_PACKAGES += \
+		loracomm_client
