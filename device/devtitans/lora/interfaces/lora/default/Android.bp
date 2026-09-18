@@ -1,0 +1,21 @@
+cc_binary {
+    name:                  "devtitans.lora-service",
+    relative_install_path: "hw",
+    init_rc:               ["lora-default.rc"],
+    vintf_fragments:       ["lora-default.xml"],
+    vendor:                true,
+
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "lora_lib",
+        "devtitans.lora-V1-ndk",
+    ],
+
+    srcs: [
+        "lora_service.cpp",
+        "main.cpp"
+    ],
+    
+    required: [ "lora_lib" ],
+}
