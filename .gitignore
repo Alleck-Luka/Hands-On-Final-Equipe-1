@@ -1,4 +1,9 @@
-Hands-On-Final-Equipe-1/
-kraken/
-device/
-kraken/
+*
+
+!/kernel_recompilado/
+!/kernel_recompilado/*
+!/device/
+!/device/devtitans/
+!/device/devtitans/lora/
+!/device/devtitans/lora/**
+!/device/devtitans/lora/*
