@@ -1,5 +1,0 @@
-service devtitans.lora-service /vendor/bin/hw/devtitans.lora-service
-    interface aidl devtitans.lora.ILora/default
-    class hal
-    user root
-    group root

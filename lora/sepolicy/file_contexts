@@ -1,4 +1,0 @@
-# Define o rótulo do daemon lora
-/vendor/bin/hw/devtitans.lora-service  u:object_r:lora_daemon_exec:s0
-# Linha em branco para evitar erro de compilação
-        

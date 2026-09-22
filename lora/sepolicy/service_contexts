@@ -1,4 +1,0 @@
-# Define o rótulo do serviço AIDL lora
-devtitans.lora.ILora/default  u:object_r:lora_service:s0
-# Linha em branco para evitar erro de compilação
-        

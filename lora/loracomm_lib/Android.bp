@@ -1,8 +1,0 @@
-cc_library {
-    name:        "loracomm_lib",
-    srcs:        [ "*.cpp" ],
-    export_include_dirs: [ "." ],                       // Exporta o nosso include para os módulos dependem de nós
-
-    installable: true,
-    vendor:      true
-}

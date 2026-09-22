@@ -8,4 +8,6 @@ PRODUCT_BRAND := LowRanger
 PRODUCT_MODEL := LowRangerOne
 
 PRODUCT_PACKAGES += \
-		loracomm_client
+	lora_service_client \
+	loracomm_lib \
+	loracomm_client

@@ -8,7 +8,7 @@ cc_binary {
     shared_libs: [
         "libbase",
         "libbinder_ndk",
-        "lora_lib",
+        "loracomm_lib",
         "devtitans.lora-V1-ndk",
     ],
 
@@ -17,5 +17,5 @@ cc_binary {
         "main.cpp"
     ],
     
-    required: [ "lora_lib" ],
+    required: [ "loracomm_lib" ],
 }

@@ -12,6 +12,8 @@ namespace devtitans::loracomm
     if (stat(dirPath, &dirStat) == 0)
       if (S_ISDIR(dirStat.st_mode))
         return 1; // Se o diretório existir, retorna 1
+    
+    return 0;
   }
 
   string Loracomm::readFileValue(string file)

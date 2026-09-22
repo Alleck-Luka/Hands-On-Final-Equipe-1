@@ -22,7 +22,7 @@ namespace aidl::devtitans::lora {
 
     ndk::ScopedAStatus LoraService::getAux(int32_t* _aidl_return) {
         *_aidl_return = this->lora.getAux();
-        LOG(INFO) << "getAux(): " << *_aidl_return;
+        LOG(INFO) << "getAux(): " << (*_aidl_return ? "true" : "false");
         return ndk::ScopedAStatus::ok();
     }
 
