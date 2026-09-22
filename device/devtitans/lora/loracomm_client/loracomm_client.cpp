@@ -70,7 +70,7 @@ namespace devtitans::loracomm
     }
     else if (!strcmp(argv[1], "get-rx-count"))
     {
-      cout << "Última mensagem: " << loracomm.getLastRx() << endl;
+      cout << "Quantidade de mensagens recebidas: " << loracomm.getRxCount() << endl;
     }
     else
     {
