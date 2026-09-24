@@ -9,3 +9,4 @@ interface ILora {
     long getRxCount();
     String getLastRx();
 }
+
