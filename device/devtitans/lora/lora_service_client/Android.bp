@@ -1,0 +1,9 @@
+cc_binary {
+    name: "lora_service_client",
+    srcs: ["lora_service_client.cpp"],
+    vendor: true,
+    shared_libs: [
+        "libbinder_ndk",
+        "devtitans.lora-V1-ndk",
+    ]
+}
