@@ -23,9 +23,11 @@ allow lora_daemon vendor_lora_prop:file { open getattr map read };
 allow platform_app lora_daemon:binder call;
 allow platform_app lora_service:service_manager find;
 
-# Permite que apps normais acessem o daemon e o serviço
-allow untrusted_app lora_daemon:binder call;
-allow untrusted_app lora_service:service_manager find;
+# Apps normais (untrusted_app) NÃO acessam o daemon: a senha do LoRa (getKey/setKey)
+# fica restrita a apps privilegiados. Obs.: o SELinux do binder é por domínio (não por
+# método), então não há como liberar apenas os métodos "públicos" para untrusted_app.
+# allow untrusted_app lora_daemon:binder call;
+# allow untrusted_app lora_service:service_manager find;
 
 
 allow shell lora_service:service_manager find;

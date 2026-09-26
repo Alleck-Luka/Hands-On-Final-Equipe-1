@@ -38,4 +38,16 @@ namespace aidl::devtitans::lora {
         return ndk::ScopedAStatus::ok();
     }
 
+    ndk::ScopedAStatus LoraService::getKey(std::string* _aidl_return) {
+        *_aidl_return = this->lora.getKey();
+        LOG(INFO) << "getKey(): " << *_aidl_return;
+        return ndk::ScopedAStatus::ok();
+    }
+
+    ndk::ScopedAStatus LoraService::setKey(const std::string& in_key, bool* _aidl_return) {
+        *_aidl_return = this->lora.setKey(in_key);
+        LOG(INFO) << "setKey(" << in_key << "): " << (*_aidl_return ? "true" : "false");
+        return ndk::ScopedAStatus::ok();
+    }
+
 }

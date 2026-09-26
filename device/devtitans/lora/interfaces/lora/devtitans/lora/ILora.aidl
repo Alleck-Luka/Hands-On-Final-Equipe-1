@@ -8,5 +8,7 @@ interface ILora {
     int getAux();
     long getRxCount();
     String getLastRx();
+    String getKey();
+    boolean setKey(in String key);
 }
 
