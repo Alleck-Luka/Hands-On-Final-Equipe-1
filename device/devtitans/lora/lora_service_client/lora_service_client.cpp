@@ -14,7 +14,7 @@ const char *SERVICE_NAME = "devtitans.lora.ILora/default";
 void showUsage(const char *program) {
     cout << "Cliente do serviço Lora (binder)!" << endl;
     cout << "Sintaxe: " << program << " (comando)" << endl;
-    cout << "    Comandos: connect, send (payload), ping, get-aux, get-rx-count, get-last-rx" << endl;
+    cout << "    Comandos: connect, send (payload), ping, get-aux, get-rx-count, get-last-rx, get-key, set-key (key)" << endl;
     cout << "    Obs.: use aspas para mensagens com espaços, ex.: " << program << " send \"ola mundo\"" << endl;
 }
 
@@ -112,6 +112,35 @@ int main(int argc, char **argv) {
             return 1;
         }
         cout << "Última mensagem: " << _aidl_return << endl;
+    }
+
+    // 7. getKey(): chave/senha atual configurada no dispositivo
+    else if (command == "get-key") {
+        string _aidl_return;
+        ScopedAStatus status = service->getKey(&_aidl_return);
+        if (!status.isOk()) {
+            cout << "Erro: " << status.getDescription() << endl;
+            return 1;
+        }
+        cout << "Key atual do dispositivo: " << _aidl_return << endl;
+    }
+
+    // 8. setKey(key): troca a chave/senha do dispositivo
+    else if (command == "set-key") {
+        if (argc < 3) {
+            cout << "Erro: o comando set-key exige uma chave." << endl;
+            showUsage(argv[0]);
+            return 1;
+        }
+
+        string key = argv[2];
+        bool _aidl_return = false;
+        ScopedAStatus status = service->setKey(key, &_aidl_return);
+        if (!status.isOk()) {
+            cout << "Erro: " << status.getDescription() << endl;
+            return 1;
+        }
+        cout << (_aidl_return ? "Key atualizada: " : "Erro ao setar key: ") << key << endl;
     }
 
     else {

@@ -25,3 +25,6 @@ DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := device/devtitans/lora/device_frame
 
 # Manager
 PRODUCT_PACKAGES += devtitans.loramanager
+
+# App de teste do Lora (envia/recebe mensagens e troca a senha via HAL)
+PRODUCT_PACKAGES += LoraApp

@@ -5,6 +5,19 @@ using namespace std; // Permite usar string, ifstream diretamente ao invés de s
 namespace devtitans::loracomm
 { // Entra no pacote devtitans::loracomm
 
+  // Conversões seguras: sem o dispositivo conectado o readFileValue() retorna ""
+  // (e em caso de erro o driver pode devolver um valor não numérico). Sem isso,
+  // stoi/stol lançariam exceção e derrubariam o processo (daemon/cliente).
+  static int toInt(const string &value)
+  {
+    try { return stoi(value); } catch (...) { return 0; }
+  }
+
+  static long toLong(const string &value)
+  {
+    try { return stol(value); } catch (...) { return 0; }
+  }
+
   int Loracomm::connect()
   {
     char dirPath[] = "/sys/kernel/loracomm";
@@ -66,17 +79,17 @@ namespace devtitans::loracomm
 
   bool Loracomm::ping() {
       string val = this->readFileValue("ping");
-      return val.empty() ? false : (stoi(val) != 0);
+      return toInt(val) != 0;
   }
 
   bool Loracomm::getAux() {
       string val = this->readFileValue("aux");
-      return val.empty() ? 0 : stoi(val);
+      return toInt(val) != 0;
   }
 
   long Loracomm::getRxCount() {
       string val = this->readFileValue("rx_count");
-      return val.empty() ? 0 : stol(val);
+      return toLong(val);
   }
 
   string Loracomm::getLastRx()
