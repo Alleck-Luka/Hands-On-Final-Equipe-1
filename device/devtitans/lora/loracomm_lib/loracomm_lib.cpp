@@ -64,19 +64,19 @@ namespace devtitans::loracomm
     return this->writeFileValue("send", payload);
   }
 
-  bool Loracomm::ping()
-  {
-    return stoi(this->readFileValue("ping"));
+  bool Loracomm::ping() {
+      string val = this->readFileValue("ping");
+      return val.empty() ? false : (stoi(val) != 0);
   }
 
-  bool Loracomm::getAux()
-  {
-    return stoi(this->readFileValue("aux"));
+  bool Loracomm::getAux() {
+      string val = this->readFileValue("aux");
+      return val.empty() ? 0 : stoi(val);
   }
 
-  long Loracomm::getRxCount()
-  {
-    return stol(this->readFileValue("rx_count"));
+  long Loracomm::getRxCount() {
+      string val = this->readFileValue("rx_count");
+      return val.empty() ? 0 : stol(val);
   }
 
   string Loracomm::getLastRx()

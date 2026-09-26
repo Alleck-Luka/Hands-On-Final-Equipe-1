@@ -26,5 +26,9 @@ allow platform_app lora_service:service_manager find;
 # Permite que apps normais acessem o daemon e o serviço
 allow untrusted_app lora_daemon:binder call;
 allow untrusted_app lora_service:service_manager find;
+
+
+allow shell lora_service:service_manager find;
+allow shell lora_daemon:binder call;
 # Linha em branco para evitar erro de compilação
-        
+

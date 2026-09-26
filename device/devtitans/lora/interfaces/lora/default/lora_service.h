@@ -7,20 +7,20 @@
 #include <aidl/devtitans/lora/BnLora.h>
 #include "loracomm_lib.h"
 
-using namespace devtitans::lora;
+using namespace devtitans::loracomm;
 
 namespace aidl::devtitans::lora {
 
-class LoraService : public BnLora {
-    public:
-        ndk::ScopedAStatus connect(int32_t* _aidl_return) override;
-        ndk::ScopedAStatus send(const std::string& in_payload, bool* _aidl_return) override;
-        ndk::ScopedAStatus ping(bool* _aidl_return) override;
-        ndk::ScopedAStatus getAux(bool* _aidl_return) override;
-        ndk::ScopedAStatus getRxCount(int64_t* _aidl_return) override;
-        ndk::ScopedAStatus getLastRx(std::string* _aidl_return) override;
-    private:
-        Lora lora;                                 // Biblioteca
-};
+    class LoraService : public BnLora {
+        public:
+            ndk::ScopedAStatus connect(int32_t* _aidl_return) override;
+            ndk::ScopedAStatus send(const std::string& in_payload, bool* _aidl_return) override;
+            ndk::ScopedAStatus ping(bool* _aidl_return) override;
+            ndk::ScopedAStatus getAux(int32_t* _aidl_return) override;
+            ndk::ScopedAStatus getRxCount(int64_t* _aidl_return) override;
+            ndk::ScopedAStatus getLastRx(std::string* _aidl_return) override;
+        private:
+            Loracomm lora;                                 // Biblioteca
+    };
 
 }

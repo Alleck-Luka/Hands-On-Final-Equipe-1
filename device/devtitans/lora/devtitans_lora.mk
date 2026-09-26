@@ -7,7 +7,17 @@ PRODUCT_DEVICE := lora
 PRODUCT_BRAND := LowRanger
 PRODUCT_MODEL := LowRangerOne
 
+# devtitans.lora          -> interface AIDL (libs -V1-ndk/-V1-cpp/.jar na imagem)
+# devtitans.lora-service  -> daemon do HAL (+ .rc do init e fragmento VINTF)
+# lora_service_client     -> cliente do HAL via binder (Lab 8)
+# loracomm_lib            -> biblioteca de acesso ao /sys/kernel/loracomm
+# loracomm_client         -> cliente direto no sysfs (debug)
 PRODUCT_PACKAGES += \
-	lora_service_client \
+	devtitans.lora \
+	devtitans.lora-service \
 	loracomm_lib \
-	loracomm_client
+	loracomm_client \
+	lora_service_client
+
+# Device Framework Matrix: o produto PRECISA do serviço ILora/default
+DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := device/devtitans/lora/device_framework_matrix.xml

@@ -9,8 +9,6 @@ using namespace std; // Permite usar string diretamente ao invés de std::string
 namespace devtitans::loracomm
 {
 
-  /*Código bem próximo do smartlamp pois os projetos são parecidos*/
-
   class Loracomm
   {
   public:
@@ -56,3 +54,4 @@ namespace devtitans::loracomm
   };
 
 } // namespace
+
