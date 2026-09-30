@@ -18,7 +18,8 @@ PRODUCT_PACKAGES += \
 	devtitans.lora-service \
 	loracomm_lib \
 	loracomm_client \
-	lora_service_client
+	lora_service_client \
+	LoRaTile
 
 # Device Framework Matrix: o produto PRECISA do serviço ILora/default
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := device/devtitans/lora/device_framework_matrix.xml
