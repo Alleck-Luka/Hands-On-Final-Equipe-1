@@ -9,7 +9,5 @@ android_app {
         "res",
     ],
 
-    vendor: true,
-
     platform_apis: true,
 }
