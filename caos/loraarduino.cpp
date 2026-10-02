@@ -17,6 +17,7 @@ String radioBuffer;
 
 String lastRx = "";
 unsigned long rxCount = 0;
+String key = "";          // chave/senha do LoRa (SET_KEY/GET_KEY)
 
 bool waitAux(unsigned long timeoutMs = 2000) {
   unsigned long start = millis();
@@ -88,6 +89,20 @@ void processUsbCommand(String cmd) {
     return;
   }
 
+  if (cmd == "GET_KEY") {
+    Serial.print("RES GET_KEY ");
+    Serial.println(key);
+    return;
+  }
+
+  if (cmd.startsWith("SET_KEY ")) {
+    String newKey = cmd.substring(8);       // tudo depois de "SET_KEY "
+    newKey.trim();
+    key = newKey;
+    Serial.println("RES SET_KEY 1");         // 1 = sucesso (convenção do driver)
+    return;
+  }
+
   if (cmd == "HELP") {
     Serial.println("Commands:");
     Serial.println("  SEND <text>");
@@ -95,6 +110,8 @@ void processUsbCommand(String cmd) {
     Serial.println("  GET_AUX");
     Serial.println("  GET_RX_COUNT");
     Serial.println("  GET_LAST_RX");
+    Serial.println("  GET_KEY");
+    Serial.println("  SET_KEY <key>");
     return;
   }
 

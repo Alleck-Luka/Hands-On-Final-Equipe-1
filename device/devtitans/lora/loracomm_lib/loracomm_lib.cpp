@@ -1,9 +1,24 @@
 #include "loracomm_lib.h"
+#include <cstdlib> // strtol / strtoll (conversões sem exceções)
 
 using namespace std; // Permite usar string, ifstream diretamente ao invés de std::string
 
 namespace devtitans::loracomm
 { // Entra no pacote devtitans::loracomm
+
+  // Conversões seguras: sem o dispositivo conectado o readFileValue() retorna "".
+  // Usamos strtol/strtoll (e não stoi/stol) porque o Android compila código vendor
+  // com -fno-exceptions (try/catch não é permitido). strtol retorna 0 para valores
+  // vazios ou não numéricos, sem nunca lançar exceção.
+  static int toInt(const string &value)
+  {
+    return value.empty() ? 0 : static_cast<int>(strtol(value.c_str(), nullptr, 10));
+  }
+
+  static long toLong(const string &value)
+  {
+    return value.empty() ? 0 : strtol(value.c_str(), nullptr, 10);
+  }
 
   int Loracomm::connect()
   {
@@ -66,17 +81,17 @@ namespace devtitans::loracomm
 
   bool Loracomm::ping() {
       string val = this->readFileValue("ping");
-      return val.empty() ? false : (stoi(val) != 0);
+      return toInt(val) != 0;
   }
 
   bool Loracomm::getAux() {
       string val = this->readFileValue("aux");
-      return val.empty() ? 0 : stoi(val);
+      return toInt(val) != 0;
   }
 
   long Loracomm::getRxCount() {
       string val = this->readFileValue("rx_count");
-      return val.empty() ? 0 : stol(val);
+      return toLong(val);
   }
 
   string Loracomm::getLastRx()

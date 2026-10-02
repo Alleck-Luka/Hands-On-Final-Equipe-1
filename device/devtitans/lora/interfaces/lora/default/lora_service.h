@@ -19,6 +19,8 @@ namespace aidl::devtitans::lora {
             ndk::ScopedAStatus getAux(int32_t* _aidl_return) override;
             ndk::ScopedAStatus getRxCount(int64_t* _aidl_return) override;
             ndk::ScopedAStatus getLastRx(std::string* _aidl_return) override;
+            ndk::ScopedAStatus getKey(std::string* _aidl_return) override;
+            ndk::ScopedAStatus setKey(const std::string& in_key, bool* _aidl_return) override;
         private:
             Loracomm lora;                                 // Biblioteca
     };
