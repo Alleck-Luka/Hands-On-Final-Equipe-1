@@ -3,7 +3,7 @@ package com.devtitans.loratile;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
-public class LoraTileService extends TileService {
+public class LoRaTileService extends TileService {
 
     private boolean enabled = false;
 
