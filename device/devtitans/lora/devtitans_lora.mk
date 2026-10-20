@@ -1,5 +1,5 @@
-# Herda as configurações do emulador (produto sdk_phone_x86_64)
-$(call inherit-product, $(SRC_TARGET_DIR)/product/sdk_phone_x86_64.mk)
+# Herda as configurações do emulador (aosp_x86_64_cf_phone)
+$(call inherit-product, device/google/cuttlefish/vsoc_x86_64/phone/aosp_cf.mk)
 
 # Sobrescreve algumas variáveis com os dados do novo produto
 PRODUCT_NAME := devtitans_lora
