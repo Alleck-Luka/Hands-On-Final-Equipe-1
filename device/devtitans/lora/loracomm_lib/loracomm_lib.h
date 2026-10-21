@@ -1,6 +1,7 @@
 #pragma once
 
-#include <fstream> // Classe ifstream
+#include <fstream>                      // Classe ifstream
+#include <android-base/properties.h>    // Função GetBoolProperty
 #include <sys/stat.h>
 #include <string>
 

@@ -2,6 +2,7 @@
 #include <cstdlib> // strtol / strtoll (conversões sem exceções)
 
 using namespace std; // Permite usar string, ifstream diretamente ao invés de std::string
+using namespace android::base;  
 
 namespace devtitans::loracomm
 { // Entra no pacote devtitans::loracomm
@@ -10,6 +11,7 @@ namespace devtitans::loracomm
   // Usamos strtol/strtoll (e não stoi/stol) porque o Android compila código vendor
   // com -fno-exceptions (try/catch não é permitido). strtol retorna 0 para valores
   // vazios ou não numéricos, sem nunca lançar exceção.
+  static int rxCount = 0;
   static int toInt(const string &value)
   {
     return value.empty() ? 0 : static_cast<int>(strtol(value.c_str(), nullptr, 10));
@@ -28,14 +30,35 @@ namespace devtitans::loracomm
       if (S_ISDIR(dirStat.st_mode))
         return 1; // Se o diretório existir, retorna 1
     
-    return 0;
+    bool allowSimulated = GetBoolProperty("devtitans.loracomm.allow_simulated", true);
+    if(!allowSimulated) {
+      return 0;
+    } else {
+      return 2;
+    }
+    
   }
 
   string Loracomm::readFileValue(string file)
   {
     int connected = this->connect();
 
-    if (connected == 1)
+    if (connected == 2) {                               // Usando valores simulados
+        if (file == "ping")
+            return "1";
+        else if (file == "aux")
+            return "1";
+        else if (file == "rx_count") {
+            rxCount++;
+            return to_string(rxCount);
+        }
+        else if (file == "last_rx") {
+            return "Mensagem simulada!";
+        }
+        else if (file == "key") {
+            return "123456789";
+        }    
+    } else if (connected == 1)
     { // Conectado. Vamos solicitar o valor ao dispositivo
       string value;
       string filename = string("/sys/kernel/loracomm/") + file;
@@ -56,6 +79,15 @@ namespace devtitans::loracomm
   bool Loracomm::writeFileValue(string file, string value)
   {
     int connected = this->connect();
+
+    if (connected == 2) {                                // Usando valores simulados
+        if (file == "send") {
+            return true;
+        }
+        else if (file == "key") {
+            return true;
+        }
+    }
 
     if (connected == 1)
     { // Conectado. Vamos solicitar o valor ao dispositivo

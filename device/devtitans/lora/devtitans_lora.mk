@@ -19,10 +19,12 @@ PRODUCT_PACKAGES += \
 	loracomm_lib \
 	loracomm_client \
 	lora_service_client \
-	LoRaTile
+	LoRaTile \
+	lora_device_framework_matrix	#Android.bp com a vintf_compatibility_matrix
 
+# ===== MUDANÇA ANDROID 16: framework matrix fica na system_ext agora
 # Device Framework Matrix: o produto PRECISA do serviço ILora/default
-DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := device/devtitans/lora/device_framework_matrix.xml
+# DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := device/devtitans/lora/device_framework_matrix.xml
 
 # Manager
 PRODUCT_PACKAGES += devtitans.loramanager
