@@ -12,6 +12,8 @@ namespace devtitans::loracomm
   // com -fno-exceptions (try/catch não é permitido). strtol retorna 0 para valores
   // vazios ou não numéricos, sem nunca lançar exceção.
   static int rxCount = 0;
+  static bool simulatedAwake = true;
+
   static int toInt(const string &value)
   {
     return value.empty() ? 0 : static_cast<int>(strtol(value.c_str(), nullptr, 10));
@@ -44,6 +46,8 @@ namespace devtitans::loracomm
     int connected = this->connect();
 
     if (connected == 2) {                               // Usando valores simulados
+        if (!simulatedAwake) return ""; // Simula o timeout do driver se estiver dormindo
+      
         if (file == "ping")
             return "1";
         else if (file == "aux")
@@ -81,10 +85,15 @@ namespace devtitans::loracomm
     int connected = this->connect();
 
     if (connected == 2) {                                // Usando valores simulados
-        if (file == "send") {
+        if (file == "send" || file == "key") {
             return true;
         }
-        else if (file == "key") {
+        else if (file == "sleep") {
+            simulatedAwake = false;
+            return true;
+        }
+        else if (file == "wakeup") {
+            simulatedAwake = true;
             return true;
         }
     }
@@ -114,6 +123,22 @@ namespace devtitans::loracomm
   bool Loracomm::ping() {
       string val = this->readFileValue("ping");
       return toInt(val) != 0;
+  }
+
+  bool Loracomm::sleep() {
+      return this->writeFileValue("sleep", "1");
+  }
+
+  bool Loracomm::wakeup() {
+      return this->writeFileValue("wakeup", "1");
+  }
+
+  bool Loracomm::isAwake() {
+      // Se a string retornar vazia, o driver deu timeout (ESP32 está dormindo)
+      // Se retornar "0" ou maior, o ESP32 processou o GET_RX_COUNT
+      // Usamos RX_COUNT pois é um comando que pode retornar valores baixos sem alterar nosso dispositivo de nenhuma maneira pesada
+      string val = this->readFileValue("rx_count");
+      return !val.empty(); 
   }
 
   bool Loracomm::getAux() {

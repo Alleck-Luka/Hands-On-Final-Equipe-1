@@ -29,6 +29,15 @@ namespace devtitans::loracomm
     // retorna true se conseguir
     bool ping();
 
+    // Coloca o ESP32 e o módulo LoRa em Deep Sleep
+    bool sleep();
+
+    // Acorda o dispositivo puxando a linha RX
+    bool wakeup();
+
+    // Verifica se o dispositivo está responsivo (sem enviar pacotes de RF)
+    bool isAwake();
+
     // retorna true se o buffer de envio estiver livre (ou seja, se o módulo estiver em modo RX)
     bool getAux();
 
@@ -45,12 +54,7 @@ namespace devtitans::loracomm
     bool setKey(string key);
 
   private:
-    /**
-     * Métodos para ler e escrever valores nos arquivos "led",
-     * "ldr" ou "threshold" do diretório /sys/kernel/loracomm.
-     */
     string readFileValue(string file);
-
     bool writeFileValue(string file, string value);
   };
 
