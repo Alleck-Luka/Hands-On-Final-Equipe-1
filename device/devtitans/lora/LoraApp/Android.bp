@@ -3,13 +3,15 @@ android_app {
 
     srcs:          [ "app/src/**/*.java" ],
     resource_dirs: [ "app/src/main/res" ],
-    static_libs:   [
-        "devtitans.lora-V1-java",                        // Biblioteca do Lora AIDL (ILora)
+    libs:          [
+        "devtitans.loramanager",                        // Manager: biblioteca Java do LoRa
     ],
 
     system_ext_specific: true,                           // O App será instalado na partição system_ext
     platform_apis:       true,                           // Permite usar APIs escondidas ("@hide"), como ServiceManager
+
     certificate:         "platform",                     // Necessário para uma aplicação do sistema
+    privileged:          true,
     use_embedded_native_libs: true,
     manifest: "app/src/main/AndroidManifest.xml",
 }

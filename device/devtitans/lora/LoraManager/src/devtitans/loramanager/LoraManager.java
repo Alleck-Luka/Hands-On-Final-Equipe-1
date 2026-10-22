@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 
 import devtitans.lora.ILora;                          // Criado pelo AIDL
+import devtitans.lora.ILoraCallback;                  // Criado pelo AIDL
 
 public class LoraManager {
     private static final String TAG = "DevTITANS.LoraManager";
@@ -68,5 +69,37 @@ public class LoraManager {
     public String getLastRx() throws RemoteException {
         Log.d(TAG, "Executando método getLastRx() ...");
         return service.getLastRx();
+    }
+
+    public String getKey() throws RemoteException {
+        Log.d(TAG, "Executando método getKey() ...");
+        return service.getKey();
+    }
+
+    public boolean setKey(String key) throws RemoteException {
+        Log.d(TAG, "Executando método setKey(" + key + ") ...");
+        return service.setKey(key);
+    }
+
+    // Callback que o app implementa (sem conhecer AIDL)
+    public interface Listener {
+        void onMessageReceived(String message);
+    }
+
+    private ILoraCallback callback;   // callback AIDL interno
+
+    public void registerListener(final Listener listener) throws RemoteException {
+        callback = new ILoraCallback.Stub() {
+            @Override
+            public void onMessageReceived(String message) {
+                listener.onMessageReceived(message);   // ATENÇÃO: thread do binder!
+            }
+        };
+        service.registerCallback(callback);
+    }
+
+    public void unregisterListener() throws RemoteException {
+        if (callback != null)
+            service.unregisterCallback(callback);
     }
 }
