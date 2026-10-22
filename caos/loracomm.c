@@ -75,8 +75,21 @@ static struct kobj_attribute rx_count_attribute = __ATTR(rx_count, S_IRUGO, attr
 static struct kobj_attribute last_rx_attribute = __ATTR(last_rx, S_IRUGO, attr_show, NULL);
 static struct kobj_attribute aux_attribute = __ATTR(aux, S_IRUGO, attr_show, NULL);
 static struct kobj_attribute key_attribute = __ATTR(key, S_IRUGO | S_IWUSR, attr_show, attr_store);
+static struct kobj_attribute sleep_attribute = __ATTR(sleep, S_IWUSR, NULL, attr_store);
+static struct kobj_attribute wakeup_attribute = __ATTR(wakeup, S_IWUSR, NULL, attr_store);
 
-static struct attribute      *attrs[]       = { &send_attribute.attr, &ping_attribute.attr, &rx_count_attribute.attr, &last_rx_attribute.attr, &aux_attribute.attr, &key_attribute.attr, NULL };
+static struct attribute *attrs[] = { 
+    &send_attribute.attr,
+    &ping_attribute.attr, 
+    &rx_count_attribute.attr, 
+    &last_rx_attribute.attr, 
+    &aux_attribute.attr, 
+    &key_attribute.attr, 
+    &sleep_attribute.attr,  // ADICIONADO
+    &wakeup_attribute.attr, // ADICIONADO
+    NULL
+};
+
 static struct attribute_group attr_group    = { .attrs = attrs };
 static struct kobject        *sys_obj;
 
@@ -725,6 +738,31 @@ static ssize_t attr_store(struct kobject *sys_obj,
 
         ret = usb_send_cmd("SET_KEY", param,
                            response, sizeof(response));
+                           
+    } else if (!strcmp(attr_name, "wakeup")) {
+        
+        int actual_size;
+        printk(KERN_INFO "LoRaComm: Enviando byte de WAKEUP\n");
+        
+        // Envia apenas um byte nulo (0x00) pela porta bulk
+        // Isso puxa a linha RX do ESP32 para LOW temporariamente, disparando o ext0 wakeup
+        usb_out_buffer[0] = 0x00;
+        ret = usb_bulk_msg(
+            loracomm_device,
+            usb_sndbulkpipe(loracomm_device, usb_out),
+            usb_out_buffer,
+            1,
+            &actual_size,
+            USB_TIMEOUT_MS
+        );
+        
+        // Retorna imediatamente pois não esperamos o ESP32 responder "RES WAKEUP"
+        // Ele vai começar a fazer boot e cuspir logs.
+        if (ret < 0) {
+            printk(KERN_WARNING "LoRaComm: Erro ao enviar WAKEUP\n");
+            return ret;
+        }
+        return count;
 
     } else {
         printk(KERN_WARNING
