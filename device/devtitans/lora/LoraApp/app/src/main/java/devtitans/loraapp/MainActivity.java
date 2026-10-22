@@ -1,24 +1,40 @@
 package devtitans.loraapp;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.text.InputType;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import devtitans.loramanager.LoraManager;             // Manager
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import devtitans.loramanager.LoraManager;
 
 public class MainActivity extends Activity {
     private static final String TAG = "DevTITANS.LoraApp";
@@ -27,35 +43,233 @@ public class MainActivity extends Activity {
     private static final int NOTIFICATION_ID = 1;
     private static final int PERMISSION_REQUEST_CODE = 100;
 
-    private TextView textStatus, textRxCount, textLastRx, textKey;
-    private EditText editMessage, editKey;
+    private static final String PREFS_NAME   = "lora_chat";
+    private static final String PREF_HISTORY = "chat_history";
+
+    private TextView textStatus;
+    private EditText editMessage;
+    private RecyclerView recyclerMessages;
+
+    private MessageAdapter adapter;
+    private final List<Message> messages = new ArrayList<>();
 
     private LoraManager loraManager;
     private NotificationManager notificationManager;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        textStatus  = findViewById(R.id.textStatus);
-        textRxCount = findViewById(R.id.textRxCount);
-        textLastRx  = findViewById(R.id.textLastRx);
-        textKey     = findViewById(R.id.textKey);
-        editMessage = findViewById(R.id.editMessage);
-        editKey     = findViewById(R.id.editKey);
+        textStatus       = findViewById(R.id.textStatus);
+        editMessage      = findViewById(R.id.editMessage);
+        recyclerMessages = findViewById(R.id.recyclerMessages);
 
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+        // RecyclerView + adapter do chat
+        adapter = new MessageAdapter(messages);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setStackFromEnd(true);          // novas mensagens no final
+        recyclerMessages.setLayoutManager(layoutManager);
+        recyclerMessages.setAdapter(adapter);
+
+        loadHistory();
 
         loraManager = LoraManager.getInstance();      // 1º uso conecta ao binder
 
         createNotificationChannel();
         requestNotificationPermission();
         registerListener();
-        updateAll(null);
+        updateStatus();
     }
 
-    // ---------- Nível 1.5: notificações ----------
+    // ---------- Histórico (persistência) ----------
+
+    private void loadHistory() {
+        String json = prefs.getString(PREF_HISTORY, null);
+        if (json == null)
+            return;
+
+        try {
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.getJSONObject(i);
+                messages.add(new Message(
+                        o.optString("text", ""),
+                        o.optLong("ts", 0),
+                        o.optBoolean("sent", false)));
+            }
+            adapter.notifyDataSetChanged();
+            scrollToBottom();
+        } catch (JSONException e) {
+            Log.e(TAG, "Erro carregando histórico:", e);
+        }
+    }
+
+    private void saveHistory() {
+        JSONArray arr = new JSONArray();
+        for (Message m : messages) {
+            JSONObject o = new JSONObject();
+            try {
+                o.put("text", m.text);
+                o.put("ts",   m.timestamp);
+                o.put("sent", m.sent);
+            } catch (JSONException e) {
+                Log.e(TAG, "Erro salvando mensagem:", e);
+            }
+            arr.put(o);
+        }
+        prefs.edit().putString(PREF_HISTORY, arr.toString()).apply();
+    }
+
+    private void addMessage(String text, boolean sent) {
+        messages.add(new Message(text, System.currentTimeMillis(), sent));
+        adapter.notifyItemInserted(messages.size() - 1);
+        scrollToBottom();
+        saveHistory();
+    }
+
+    private void scrollToBottom() {
+        recyclerMessages.post(new Runnable() {
+            @Override
+            public void run() {
+                if (adapter.getItemCount() > 0)
+                    recyclerMessages.scrollToPosition(adapter.getItemCount() - 1);
+            }
+        });
+    }
+
+    // ---------- Menu (⋮) ----------
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_refresh) {
+            updateStatus();
+            return true;
+        }
+        if (id == R.id.action_set_key) {
+            showSetKeyDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showSetKeyDialog() {
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setHint("nova senha");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Trocar senha (key)")
+                .setView(input)
+                .setPositiveButton("Salvar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String newKey = input.getText().toString().trim();
+                        if (newKey.isEmpty()) {
+                            Toast.makeText(MainActivity.this, "Digite a nova senha!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        try {
+                            boolean ok = loraManager.setKey(newKey);
+                            Toast.makeText(MainActivity.this,
+                                    ok ? "Senha alterada!" : "Falha ao alterar a senha",
+                                    Toast.LENGTH_SHORT).show();
+                        } catch (RemoteException e) {
+                            Toast.makeText(MainActivity.this, "Erro ao trocar a senha!", Toast.LENGTH_LONG).show();
+                            Log.e(TAG, "Erro trocando a senha:", e);
+                        }
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    // ---------- Status ----------
+
+    private void updateStatus() {
+        try {
+            int status = loraManager.connect();
+            if (status == 1) {
+                textStatus.setText("● Conectado");
+                textStatus.setTextColor(Color.parseColor("#B9F6CA"));
+            } else {
+                textStatus.setText("● Desconectado");
+                textStatus.setTextColor(Color.parseColor("#FFCDD2"));
+            }
+        } catch (RemoteException e) {
+            textStatus.setText("● Erro ao acessar o serviço");
+            textStatus.setTextColor(Color.parseColor("#FFCDD2"));
+            Log.e(TAG, "Erro atualizando status:", e);
+        }
+    }
+
+    // ---------- Envio ----------
+
+    public void sendMessage(View view) {
+        String message = editMessage.getText().toString().trim();
+        if (message.isEmpty()) {
+            Toast.makeText(this, "Digite uma mensagem!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            boolean ok = loraManager.send(message);
+            if (ok) {
+                addMessage(message, Message.SENT);
+                editMessage.setText("");
+            } else {
+                Toast.makeText(this, "Falha ao enviar mensagem", Toast.LENGTH_SHORT).show();
+            }
+        } catch (RemoteException e) {
+            Toast.makeText(this, "Erro ao enviar mensagem!", Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Erro enviando mensagem:", e);
+        }
+    }
+
+    // ---------- Recepção (nível 1: listener) ----------
+
+    private void registerListener() {
+        try {
+            loraManager.registerListener(new LoraManager.Listener() {
+                @Override
+                public void onMessageReceived(String message) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            addMessage(message, Message.RECEIVED);
+                            showNotification(message);
+                        }
+                    });
+                }
+            });
+        } catch (RemoteException e) {
+            Log.e(TAG, "Erro ao registrar listener:", e);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            if (loraManager != null)
+                loraManager.unregisterListener();
+        } catch (RemoteException e) {
+            Log.e(TAG, "Erro ao remover listener:", e);
+        }
+    }
+
+    // ---------- Notificação (nível 1.5) ----------
 
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
@@ -90,139 +304,5 @@ public class MainActivity extends Activity {
                 .build();
 
         notificationManager.notify(NOTIFICATION_ID, notification);
-    }
-
-    // ---------- Nível 1: listener ----------
-
-    private void registerListener() {
-        try {
-            loraManager.registerListener(new LoraManager.Listener() {
-                @Override
-                public void onMessageReceived(String message) {
-                    runOnUiThread(new Runnable() {          // callback vem de thread do binder
-                        @Override
-                        public void run() {
-                            textLastRx.setText(message == null || message.isEmpty() ? "(nenhuma)" : message);
-                            try {
-                                textRxCount.setText(String.valueOf(loraManager.getRxCount()));
-                            } catch (RemoteException e) {
-                                Log.e(TAG, "Erro lendo o contador:", e);
-                            }
-                            showNotification(message);
-                        }
-                    });
-                }
-            });
-        } catch (RemoteException e) {
-            Log.e(TAG, "Erro ao registrar listener:", e);
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        try {
-            if (loraManager != null)
-                loraManager.unregisterListener();
-        } catch (RemoteException e) {
-            Log.e(TAG, "Erro ao remover listener:", e);
-        }
-    }
-
-    // Verifica se o Manager foi acessado com sucesso
-    private boolean checkService() {
-        if (loraManager == null) {
-            textStatus.setText("Erro no Serviço");
-            textStatus.setTextColor(Color.parseColor("#73312f"));
-            return false;
-        }
-        return true;
-    }
-
-    // Executado ao clicar no botão "Atualizar"
-    public void updateAll(View view) {
-        Log.d(TAG, "Atualizando dados do dispositivo ...");
-        if (!checkService()) return;
-
-        textStatus.setText("Atualizando ...");
-        textStatus.setTextColor(Color.parseColor("#c47e00"));
-
-        try {
-            int status = loraManager.connect();
-            if (status == 1) {
-                textStatus.setText("Conectado");
-                textStatus.setTextColor(Color.parseColor("#6d790c"));
-            }
-            else {
-                textStatus.setText("Desconectado");
-                textStatus.setTextColor(Color.parseColor("#73312f"));
-            }
-
-            textKey.setText(loraManager.getKey());
-            updateRx();
-        } catch (RemoteException e) {
-            Toast.makeText(this, "Erro ao acessar o serviço!", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "Erro atualizando dados:", e);
-        }
-    }
-
-    // Lê a recepção (contador + última mensagem recebida)
-    private void updateRx() {
-        if (!checkService()) return;
-        try {
-            long count = loraManager.getRxCount();
-            textRxCount.setText(String.valueOf(count));
-
-            String last = loraManager.getLastRx();
-            textLastRx.setText(last == null || last.isEmpty() ? "(nenhuma)" : last);
-        } catch (RemoteException e) {
-            Log.e(TAG, "Erro lendo a recepção:", e);
-        }
-    }
-
-    // Executado ao clicar no botão "Enviar"
-    public void sendMessage(View view) {
-        if (!checkService()) return;
-
-        String message = editMessage.getText().toString().trim();
-        if (message.isEmpty()) {
-            Toast.makeText(this, "Digite uma mensagem!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        try {
-            boolean ok = loraManager.send(message);
-            Toast.makeText(this, ok ? "Mensagem enviada!" : "Falha ao enviar mensagem",
-                           Toast.LENGTH_SHORT).show();
-            if (ok)
-                editMessage.setText("");
-        } catch (RemoteException e) {
-            Toast.makeText(this, "Erro ao enviar mensagem!", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "Erro enviando mensagem:", e);
-        }
-    }
-
-    // Executado ao clicar no botão "Trocar senha"
-    public void setKey(View view) {
-        if (!checkService()) return;
-
-        String newKey = editKey.getText().toString().trim();
-        if (newKey.isEmpty()) {
-            Toast.makeText(this, "Digite a nova senha!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        try {
-            boolean ok = loraManager.setKey(newKey);
-            Toast.makeText(this, ok ? "Senha alterada!" : "Falha ao alterar a senha",
-                           Toast.LENGTH_SHORT).show();
-            if (ok) {
-                editKey.setText("");
-                textKey.setText(loraManager.getKey());
-            }
-        } catch (RemoteException e) {
-            Toast.makeText(this, "Erro ao trocar a senha!", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "Erro trocando a senha:", e);
-        }
     }
 }

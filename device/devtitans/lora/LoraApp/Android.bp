@@ -4,7 +4,10 @@ android_app {
     srcs:          [ "app/src/**/*.java" ],
     resource_dirs: [ "app/src/main/res" ],
     libs:          [
-        "devtitans.loramanager",                        // Manager: biblioteca Java do LoRa
+        "devtitans.loramanager",                        // Manager: biblioteca Java do LoRa (curso)
+    ],
+    static_libs:   [
+        "androidx.recyclerview_recyclerview",            // RecyclerView (historico de mensagens)
     ],
 
     system_ext_specific: true,                           // O App será instalado na partição system_ext
