@@ -6,6 +6,7 @@
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:label="@string/app_name"
         android:icon="@drawable/ic_lora">
+        <uses-library android:name="devtitans.loramanager" android:required="true" />
 
         <service
             android:name=".LoRaTileService"

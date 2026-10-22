@@ -9,6 +9,12 @@ android_app {
         "res",
     ],
 
+    libs: [
+        "devtitans.loramanager",
+    ],
+
+    required: [ "devtitans.loramanager" ],
+
     platform_apis: true,
     system_ext_specific: true,
 }

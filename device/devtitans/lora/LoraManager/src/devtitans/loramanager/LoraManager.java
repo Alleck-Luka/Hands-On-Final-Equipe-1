@@ -7,12 +7,23 @@ import android.os.RemoteException;
 
 import devtitans.lora.ILora;                          // Criado pelo AIDL
 
+/*
+    ====================================
+    Remover os Log.d no final do projeto
+    ====================================
+ */
+
 public class LoraManager {
     private static final String TAG = "DevTITANS.LoraManager";
     private IBinder binder;
     private ILora service;
 
+    public static final int LORA_STATE_DISABLED = 0;
+    public static final int LORA_STATE_ENABLED = 1;
+    public static final int LORA_STATE_UNAVAILABLE = 2;
+
     private static LoraManager instance;
+    private static int state = 0; // Substituir por chamado ao service aqui e no getLoraState
 
     // Construtor. Configura a "instância da classe" (objeto) recém-criada.
     // Note o "private" no construtor. Essa classe só pode ser instanciada dentro desse arquivo.
@@ -69,4 +80,18 @@ public class LoraManager {
         Log.d(TAG, "Executando método getLastRx() ...");
         return service.getLastRx();
     }
+
+    public int getLoraState() throws RemoteException {
+        Log.d(TAG, "Executando método getLoraState() ...");
+        // Chamar aqui o service para pegar o estado
+        return state;
+    }
+
+    // enabled false desabilita
+    public void setLoraState(int enabled) throws RemoteException {
+        // Chamar aqui o service para alterar o estado
+        Log.d(TAG, "Executando método setState(" + enabled + ") ...");
+        state = enabled;
+    }
+
 }
