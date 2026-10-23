@@ -22,12 +22,12 @@ public class LoRaTileService extends TileService {
         super.onClick();
 
         try {
-            int state = loraManager.getLoraState();
+            boolean isAwake = loraManager.isAwake();
 
-            if(state == LoraManager.LORA_STATE_ENABLED) {
-                loraManager.setLoraState(LoraManager.LORA_STATE_DISABLED);
-            } else if (state == LoraManager.LORA_STATE_DISABLED) {
-                loraManager.setLoraState(LoraManager.LORA_STATE_ENABLED);
+            if(isAwake) {
+                loraManager.sleep();
+            } else if (!isAwake) {
+                loraManager.wakeup();
             }
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -44,19 +44,18 @@ public class LoRaTileService extends TileService {
         }
 
         try {
-            int state = loraManager.getLoraState();
+            boolean isAwake = loraManager.isAwake();
             // Existem: STATE_ACTIVE, STATE_INACTIVE e STATE_UNAVAILABLE
-            if (state == LoraManager.LORA_STATE_ENABLED){
+            if (isAwake){
                 tile.setState(Tile.STATE_ACTIVE);
                 tile.setLabel("LoRa ON");
-            } else if(state == LoraManager.LORA_STATE_DISABLED) {
+            } else if(!isAwake) {
                 tile.setState(Tile.STATE_INACTIVE);
                 tile.setLabel("LoRa OFF");
-            } else if(state == LoraManager.LORA_STATE_UNAVAILABLE) {
-                tile.setState(Tile.STATE_UNAVAILABLE);
-                tile.setLabel("LoRa UNAVAILABLE");
             }
         } catch (RemoteException e) {
+            tile.setState(Tile.STATE_UNAVAILABLE);
+            tile.setLabel("LoRa UNAVAILABLE");
             e.printStackTrace();
         }
         

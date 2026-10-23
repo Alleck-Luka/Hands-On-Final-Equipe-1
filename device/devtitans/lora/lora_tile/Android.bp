@@ -5,6 +5,9 @@ android_app {
         "src/**/*.java",
     ],
 
+    certificate: "platform",
+    privileged: true,
+
     resource_dirs: [
         "res",
     ],

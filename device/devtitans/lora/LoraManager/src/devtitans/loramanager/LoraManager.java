@@ -23,7 +23,6 @@ public class LoraManager {
     public static final int LORA_STATE_UNAVAILABLE = 2;
 
     private static LoraManager instance;
-    private static int state = 0; // Substituir por chamado ao service aqui e no getLoraState
 
     // Construtor. Configura a "instância da classe" (objeto) recém-criada.
     // Note o "private" no construtor. Essa classe só pode ser instanciada dentro desse arquivo.
@@ -52,46 +51,84 @@ public class LoraManager {
     }
 
     public int connect() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return 0;
+        }
         Log.d(TAG, "Executando método connect() ...");
         return service.connect();
     }
 
     public boolean send(String payload) throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return false;
+        }
         Log.d(TAG, "Executando método send(" + payload + ") ...");
         return service.send(payload);
     }
 
     public boolean ping() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return false;
+        }
         Log.d(TAG, "Executando método ping() ...");
         return service.ping();
     }
 
+    public boolean sleep() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return false;
+        }
+        Log.d(TAG, "Executando método sleep() ...");
+        return service.sleep();
+    }
+
+    public boolean wakeup() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return false;
+        }        
+        Log.d(TAG, "Executando método wakeup() ...");
+        return service.wakeup();
+    }
+
+    public boolean isAwake() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return false;
+        }
+        Log.d(TAG, "Executando método isAwake() ...");
+        return service.isAwake();
+    }
+
     public int getAux() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return 0;
+        }
         Log.d(TAG, "Executando método getAux() ...");
         return service.getAux();
     }
 
     public long getRxCount() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return 0;
+        }
         Log.d(TAG, "Executando método getRxCount() ...");
         return service.getRxCount();
     }
 
     public String getLastRx() throws RemoteException {
+        if (service == null) {
+            Log.e(TAG, "Erro ao acessar o serviço Lora!");
+            return "";
+        }
         Log.d(TAG, "Executando método getLastRx() ...");
         return service.getLastRx();
-    }
-
-    public int getLoraState() throws RemoteException {
-        Log.d(TAG, "Executando método getLoraState() ...");
-        // Chamar aqui o service para pegar o estado
-        return state;
-    }
-
-    // enabled false desabilita
-    public void setLoraState(int enabled) throws RemoteException {
-        // Chamar aqui o service para alterar o estado
-        Log.d(TAG, "Executando método setState(" + enabled + ") ...");
-        state = enabled;
     }
 
 }

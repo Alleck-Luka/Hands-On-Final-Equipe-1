@@ -20,6 +20,24 @@ namespace aidl::devtitans::lora {
         return ndk::ScopedAStatus::ok();
     }
 
+    ndk::ScopedAStatus LoraService::sleep(bool* _aidl_return) {
+        *_aidl_return = this->lora.sleep();
+        LOG(INFO) << "sleep(): " << (*_aidl_return ? "true" : "false");
+        return ndk::ScopedAStatus::ok();
+    }
+
+    ndk::ScopedAStatus LoraService::wakeup(bool* _aidl_return) {
+        *_aidl_return = this->lora.wakeup();
+        LOG(INFO) << "wakeup(): " << (*_aidl_return ? "true" : "false");
+        return ndk::ScopedAStatus::ok();
+    }
+
+    ndk::ScopedAStatus LoraService::isAwake(bool* _aidl_return) {
+        *_aidl_return = this->lora.isAwake();
+        LOG(INFO) << "isAwake(): " << (*_aidl_return ? "true" : "false");
+        return ndk::ScopedAStatus::ok();
+    }
+
     ndk::ScopedAStatus LoraService::getAux(int32_t* _aidl_return) {
         *_aidl_return = this->lora.getAux();
         LOG(INFO) << "getAux(): " << (*_aidl_return ? "true" : "false");

@@ -35,7 +35,7 @@ namespace devtitans::loracomm
     // Acorda o dispositivo puxando a linha RX
     bool wakeup();
 
-    // Verifica se o dispositivo está responsivo (sem enviar pacotes de RF)
+    // Verifica se o dispositivo está responsivo
     bool isAwake();
 
     // retorna true se o buffer de envio estiver livre (ou seja, se o módulo estiver em modo RX)
