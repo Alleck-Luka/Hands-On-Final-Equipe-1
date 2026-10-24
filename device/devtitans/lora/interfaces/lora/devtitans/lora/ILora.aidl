@@ -1,4 +1,5 @@
 package devtitans.lora;
+import devtitans.lora.ILoraCallback;
 
 @VintfStability
 interface ILora {
@@ -13,4 +14,3 @@ interface ILora {
     void registerCallback(in ILoraCallback callback);
     void unregisterCallback(in ILoraCallback callback);
 }
-

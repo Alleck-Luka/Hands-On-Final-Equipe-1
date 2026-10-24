@@ -92,7 +92,17 @@ public class LoraManager {
         callback = new ILoraCallback.Stub() {
             @Override
             public void onMessageReceived(String message) {
-                listener.onMessageReceived(message);   // ATENÇÃO: thread do binder!
+                // Your callback handling logic here
+            }
+
+            @Override
+            public int getInterfaceVersion() {
+                return ILoraCallback.VERSION;
+            }
+
+            @Override
+            public String getInterfaceHash() {
+                return ILoraCallback.HASH;
             }
         };
         service.registerCallback(callback);
