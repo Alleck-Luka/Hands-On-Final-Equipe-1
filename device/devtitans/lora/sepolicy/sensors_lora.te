@@ -1,0 +1,4 @@
+# O SubHal LoRa roda DENTRO do serviço de sensores
+# (android.hardware.sensors-service.multihal, domínio hal_sensors_default)
+# e precisa ler /sys/kernel/loracomm (que é do tipo sysfs).
+allow hal_sensors_default sysfs:file { getattr open read };

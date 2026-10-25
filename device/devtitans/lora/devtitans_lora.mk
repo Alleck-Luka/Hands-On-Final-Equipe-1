@@ -29,3 +29,13 @@ PRODUCT_PACKAGES += devtitans.loramanager
 
 # App de teste do Lora (envia/recebe mensagens e troca a senha via HAL)
 PRODUCT_PACKAGES += LoraApp
+
+# SubHal do LoRa no Sensors HAL (MultiHAL). Expõe um sensor numérico customizado
+# (type = DEVICE_PRIVATE_BASE + 1) que gera uma flag 0 -> 1 a cada mensagem recebida.
+# O HalProxy (android.hardware.sensors-service.multihal) carrega este .so via dlopen.
+PRODUCT_PACKAGES += lora.sensors.subhal
+
+# Config do MultiHAL no /odm (lido além do /vendor/etc/sensors/hals.conf, que já
+# contém o sub-hal do ranchu). Assim não sobrescrevemos o arquivo do emulador.
+PRODUCT_COPY_FILES += \
+    device/devtitans/lora/sensors/hals.conf:$(TARGET_COPY_OUT_ODM)/etc/sensors/hals.conf
