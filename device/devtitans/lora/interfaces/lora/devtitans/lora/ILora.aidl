@@ -1,5 +1,7 @@
 package devtitans.lora;
 
+import devtitans.lora.ILoraCallback;
+
 @VintfStability
 interface ILora {
     int connect();
