@@ -94,6 +94,19 @@ public class LoraManager {
             public void onMessageReceived(String message) {
                 listener.onMessageReceived(message);   // ATENÇÃO: thread do binder!
             }
+
+            // O ILoraCallback é @VintfStability, então o Stub gerado pelo AIDL
+            // exige os métodos de versão/hash da interface. Como a interface não
+            // tem versão "frozen", usamos os valores padrão.
+            @Override
+            public int getInterfaceVersion() {
+                return 0;
+            }
+
+            @Override
+            public String getInterfaceHash() {
+                return "notfrozen";
+            }
         };
         service.registerCallback(callback);
     }

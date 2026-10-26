@@ -99,13 +99,13 @@ void LoraSubHal::postEvent(float value) {
 
 Return<void> LoraSubHal::registerDirectChannel(const SharedMemInfo&,
                                                ISensors::registerDirectChannel_cb _hidl_cb) {
-    _hidl_cb(Result::NOT_SUPPORTED, -1);
+    _hidl_cb(Result::INVALID_OPERATION, -1);   // direct channel não suportado
     return Void();
 }
 
 Return<void> LoraSubHal::configDirectReport(int32_t, int32_t, RateLevel,
                                             ISensors::configDirectReport_cb _hidl_cb) {
-    _hidl_cb(Result::NOT_SUPPORTED, -1);
+    _hidl_cb(Result::INVALID_OPERATION, -1);   // direct report não suportado
     return Void();
 }
 

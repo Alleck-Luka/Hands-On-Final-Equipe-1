@@ -11,10 +11,13 @@ namespace sensors {
 namespace V2_0 {
 namespace implementation {
 
-// O pacote 2.0 não re-exporta SensorType (ele só existe em 1.0), então o
+// O pacote 2.0 não re-exporta estes tipos (eles só existem em 1.0), então os
 // trazemos explicitamente para o escopo. (Event/Result/SensorInfo já vêm
 // "using"ados pelo SubHal.h.)
+using ::android::hardware::sensors::V1_0::OperationMode;
+using ::android::hardware::sensors::V1_0::RateLevel;
 using ::android::hardware::sensors::V1_0::SensorType;
+using ::android::hardware::sensors::V1_0::SharedMemInfo;
 
 /**
  * SubHal do LoRa para o MultiHAL de sensores (android.hardware.sensors@2.0).
