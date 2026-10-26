@@ -6,6 +6,9 @@ android_app {
     libs:          [
         "devtitans.loramanager",                        // Manager: biblioteca Java do LoRa
     ],
+    static_libs:   [
+        "androidx.recyclerview_recyclerview",            // RecyclerView (MessageAdapter)
+    ],
 
     system_ext_specific: true,                           // O App será instalado na partição system_ext
     platform_apis:       true,                           // Permite usar APIs escondidas ("@hide"), como ServiceManager
