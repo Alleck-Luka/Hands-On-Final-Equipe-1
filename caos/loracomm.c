@@ -71,6 +71,7 @@ static void loracomm_dispatch_line(char *line);
 static ssize_t loracomm_evt_read(struct file *file, char __user *buf,
                                  size_t len, loff_t *off);
 static unsigned int loracomm_evt_poll(struct file *file, poll_table *wait);
+static struct miscdevice loracomm_misc;
 
 static char recv_line[MAX_RECV_LINE];
 static struct usb_device *loracomm_device;
