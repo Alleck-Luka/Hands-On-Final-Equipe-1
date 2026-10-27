@@ -2,6 +2,13 @@
 #include <linux/usb.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/wait.h>
+#include <linux/poll.h>
+#include <linux/miscdevice.h>
+#include <linux/kthread.h>
+#include <linux/completion.h>
+#include <linux/mutex.h>
+#include <linux/uaccess.h>
 
 MODULE_AUTHOR("Alleck dos Santos <allecklukap@gmail.com>");
 MODULE_DESCRIPTION("Driver de acesso ao LoRaComm (ESP32 com Chip Serial CP2102)");
@@ -57,12 +64,51 @@ static int cp210x_write_u32(struct usb_interface *interface,
                             u8 request,
                             u32 value);
 static int cp210x_init_uart(struct usb_interface *interface);
+static int loracomm_reader(void *data);
+static void loracomm_dispatch_line(char *line);
+static ssize_t loracomm_evt_read(struct file *file, char __user *buf,
+                                 size_t len, loff_t *off);
+static unsigned int loracomm_evt_poll(struct file *file, poll_table *wait);
 
 static char recv_line[MAX_RECV_LINE];
 static struct usb_device *loracomm_device;
 static uint usb_in, usb_out;
 static char *usb_in_buffer, *usb_out_buffer;
 static int usb_max_size;
+
+/*
+ * ============================================================================
+ *  NÍVEL 2 - evento real (sem polling)
+ *
+ *  O firmware já emite "EVT RX <payload>" na serial quando uma mensagem LoRa
+ *  chega. Aqui o driver passa a ENTREGAR isso como evento:
+ *
+ *    - um kthread (loracomm_reader) é o ÚNICO leitor do bulk-IN; ele monta as
+ *      linhas e despacha:
+ *         "EVT RX <payload>" -> guarda em evt_payload e wake_up(&evt_wq)
+ *         "RES <cmd> ..."    -> completa o comando pendente (cmd_done)
+ *    - /dev/loracomm (misc device) expõe read()/poll() para o userspace
+ *      (o LoRa HAL e o Sensors HAL) bloquear até chegar mensagem.
+ * ============================================================================
+ */
+
+/* ---- canal de evento (EVT RX) ---- */
+static DECLARE_WAIT_QUEUE_HEAD(evt_wq);
+static char evt_payload[MAX_RECV_LINE];
+static bool evt_available;
+static bool evt_shutdown;
+static DEFINE_MUTEX(evt_lock);
+
+/* ---- resposta de comando (RES ...) ---- */
+static char cmd_expected[MAX_RECV_LINE];   /* ex.: "RES GET_RX_COUNT" */
+static char cmd_response[MAX_RECV_LINE];   /* valor extraido (ex.: "5") */
+static bool cmd_pending;
+static DEFINE_MUTEX(cmd_lock);             /* protege cmd_* */
+static DEFINE_MUTEX(cmd_serial_lock);      /* um comando por vez */
+static DECLARE_COMPLETION(cmd_done);
+
+/* ---- kthread leitor + /dev/loracomm ---- */
+static struct task_struct *reader_task;
 
 // Atributos que irão para o sysf
 // Explicação: _ATTR(nome, permissões, função_show, função_store)
@@ -229,10 +275,41 @@ static int usb_probe(struct usb_interface *interface,
     printk(KERN_INFO
            "LoRaComm: Sysfs criado em /sys/kernel/loracomm/\n");
 
+    /*
+     * 5. Nivel 2: cria o /dev/loracomm (canal de eventos) e o kthread leitor.
+     */
+    evt_available = false;
+    evt_shutdown = false;
+
+    ret = misc_register(&loracomm_misc);
+    if (ret) {
+        printk(KERN_ERR
+               "LoRaComm: Falha ao registrar /dev/loracomm: %d\n", ret);
+        goto err_sysfs;
+    }
+
+    reader_task = kthread_run(loracomm_reader, NULL, "loracomm_rx");
+    if (IS_ERR(reader_task)) {
+        ret = PTR_ERR(reader_task);
+        reader_task = NULL;
+        printk(KERN_ERR
+               "LoRaComm: Falha ao criar kthread leitor: %d\n", ret);
+        goto err_misc;
+    }
+
+    printk(KERN_INFO
+           "LoRaComm: /dev/loracomm criado (eventos EVT RX)\n");
+
     printk(KERN_INFO
            "LoRaComm: === PROBE CONCLUÍDO COM SUCESSO ===\n");
 
     return 0;
+
+err_misc:
+    misc_deregister(&loracomm_misc);
+
+err_sysfs:
+    sysfs_remove_group(sys_obj, &attr_group);
 
 err_kobject:
     kobject_put(sys_obj);
@@ -463,6 +540,20 @@ static void usb_disconnect(struct usb_interface *interface)
     usb_set_intfdata(interface, NULL);
 
     /*
+     * Nivel 2: para o kthread leitor PRIMEIRO (e ele que usa usb_in_buffer)
+     * e depois derruba o /dev/loracomm, soltando quem estiver em poll().
+     */
+    if (reader_task) {
+        kthread_stop(reader_task);
+        reader_task = NULL;
+    }
+
+    evt_shutdown = true;
+    wake_up_interruptible(&evt_wq);
+
+    misc_deregister(&loracomm_misc);
+
+    /*
      * Primeiro retire a interface visível ao userspace,
      * para evitar novas operações.
      */
@@ -484,12 +575,147 @@ static void usb_disconnect(struct usb_interface *interface)
         usb_put_dev(udev);
 }
 
-static int usb_send_cmd(char *cmd, char *param, char *response, size_t response_size) {
+/*
+ * Classifica cada linha vinda do dispositivo:
+ *  - "EVT RX <payload>" -> evento: guarda e acorda quem esta em poll()/read()
+ *  - "RES <cmd> ..."    -> resposta: completa o comando pendente
+ *  - resto              -> descarta
+ */
+static void loracomm_dispatch_line(char *line)
+{
+    if (!strncmp(line, "EVT RX ", 7)) {
+        mutex_lock(&evt_lock);
+        strscpy(evt_payload, line + 7, sizeof(evt_payload));
+        evt_available = true;
+        mutex_unlock(&evt_lock);
+
+        wake_up_interruptible(&evt_wq);
+
+        printk(KERN_INFO "LoRaComm: EVT RX -> '%s'\n", evt_payload);
+        return;
+    }
+
+    if (!strncmp(line, "RES ", 4)) {
+        mutex_lock(&cmd_lock);
+        if (cmd_pending &&
+            !strncmp(line, cmd_expected, strlen(cmd_expected))) {
+            char *val = line + strlen(cmd_expected);
+
+            if (*val == ' ')
+                val++;
+
+            strscpy(cmd_response, val, sizeof(cmd_response));
+            complete(&cmd_done);
+        }
+        mutex_unlock(&cmd_lock);
+        return;
+    }
+}
+
+/*
+ * kthread: UNICO leitor do bulk-IN. Drena a USB continuamente, monta linhas
+ * e despacha (evento x resposta). Substitui a leitura sincrona que o
+ * usb_send_cmd fazia antes.
+ */
+static int loracomm_reader(void *data)
+{
+    int actual_size, i;
     int recv_size = 0;
-    int ret, actual_size, i;
-    unsigned long timeout;
-    char resp_expected[MAX_RECV_LINE];
-    char *resp_pos;
+
+    while (!kthread_should_stop()) {
+        int ret;
+
+        if (!loracomm_device)
+            break;
+
+        ret = usb_bulk_msg(
+            loracomm_device,
+            usb_rcvbulkpipe(loracomm_device, usb_in),
+            usb_in_buffer,
+            min(usb_max_size, MAX_RECV_LINE),
+            &actual_size,
+            2000
+        );
+
+        if (ret || actual_size <= 0)
+            continue;
+
+        for (i = 0; i < actual_size; i++) {
+            char c = usb_in_buffer[i];
+
+            if (c == '\n') {
+                recv_line[recv_size] = '\0';
+                if (recv_size > 0)
+                    loracomm_dispatch_line(recv_line);
+                recv_size = 0;
+            } else if (c != '\r' && recv_size < MAX_RECV_LINE - 1) {
+                recv_line[recv_size++] = c;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/* ---- /dev/loracomm: canal de eventos (EVT RX) com read()/poll() ---- */
+
+static ssize_t loracomm_evt_read(struct file *file, char __user *buf,
+                                 size_t len, loff_t *off)
+{
+    int n;
+
+    if (wait_event_interruptible(evt_wq, evt_available || evt_shutdown))
+        return -ERESTARTSYS;
+
+    if (evt_shutdown && !evt_available)
+        return -ENODEV;
+
+    mutex_lock(&evt_lock);
+    n = strlen(evt_payload);
+    if ((size_t)n > len)
+        n = len;
+    if (copy_to_user(buf, evt_payload, n)) {
+        mutex_unlock(&evt_lock);
+        return -EFAULT;
+    }
+    evt_available = false;
+    mutex_unlock(&evt_lock);
+
+    return n;
+}
+
+static unsigned int loracomm_evt_poll(struct file *file, poll_table *wait)
+{
+    unsigned int mask = 0;
+
+    poll_wait(file, &evt_wq, wait);
+
+    mutex_lock(&evt_lock);
+    if (evt_available)
+        mask |= POLLIN | POLLRDNORM;
+    mutex_unlock(&evt_lock);
+
+    if (evt_shutdown)
+        mask |= POLLHUP;
+
+    return mask;
+}
+
+static const struct file_operations loracomm_fops = {
+    .owner = THIS_MODULE,
+    .read  = loracomm_evt_read,
+    .poll  = loracomm_evt_poll,
+};
+
+static struct miscdevice loracomm_misc = {
+    .minor = MISC_DYNAMIC_MINOR,
+    .name  = "loracomm",
+    .fops  = &loracomm_fops,
+};
+
+static int usb_send_cmd(char *cmd, char *param, char *response, size_t response_size) {
+    int ret, actual_size;
+    long waited;
 
     printk(KERN_INFO "LoRaComm: === ENVIANDO COMANDO ===\n");
     printk(KERN_INFO "LoRaComm: Comando: %s, Param: %s\n", cmd, param);
@@ -499,6 +725,9 @@ static int usb_send_cmd(char *cmd, char *param, char *response, size_t response_
         return -1;
     }
 
+    /* Nivel 2: um comando por vez (a leitura e feita pelo kthread) */
+    mutex_lock(&cmd_serial_lock);
+
     // Monta: SEND mensagem\n ou PING\n
     if (param)
         snprintf(usb_out_buffer, usb_max_size,
@@ -506,6 +735,17 @@ static int usb_send_cmd(char *cmd, char *param, char *response, size_t response_
     else
         snprintf(usb_out_buffer, usb_max_size,
                  "%s\n", cmd);
+
+    /*
+     * Prepara o que esperamos ANTES de enviar, para o reader (que roda em
+     * paralelo) nao perder a resposta.
+     */
+    mutex_lock(&cmd_lock);
+    snprintf(cmd_expected, sizeof(cmd_expected), "RES %s", cmd);
+    cmd_response[0] = '\0';
+    cmd_pending = true;
+    mutex_unlock(&cmd_lock);
+    reinit_completion(&cmd_done);
 
     printk(KERN_INFO "LoRaComm: Buffer de saida: '%s' (tamanho: %zu)\n",
            usb_out_buffer, strlen(usb_out_buffer));
@@ -522,6 +762,10 @@ static int usb_send_cmd(char *cmd, char *param, char *response, size_t response_
     if (ret) {
         printk(KERN_ERR "LoRaComm: Erro ao enviar comando! Código: %d\n",
                ret);
+        mutex_lock(&cmd_lock);
+        cmd_pending = false;
+        mutex_unlock(&cmd_lock);
+        mutex_unlock(&cmd_serial_lock);
         return -1;
     }
 
@@ -529,97 +773,27 @@ static int usb_send_cmd(char *cmd, char *param, char *response, size_t response_
            actual_size);
 
     /*
-     * Esperamos algo como:
-     *
-     * RES PING PONG
-     * RES GET_RX_COUNT 5
-     * RES GET_LAST_RX mensagem
+     * Nivel 2: a leitura e feita pelo kthread (loracomm_reader). Aqui so
+     * esperamos o completion que ele dispara ao ver "RES <cmd>".
      */
-    snprintf(resp_expected, sizeof(resp_expected),
-             "RES %s", cmd);
+    printk(KERN_INFO "LoRaComm: Esperando resposta (completion)...\n");
 
-    printk(KERN_INFO "LoRaComm: Esperando resposta: '%s'\n",
-           resp_expected);
+    waited = wait_for_completion_interruptible_timeout(
+        &cmd_done, msecs_to_jiffies(USB_TIMEOUT_MS));
 
-    timeout = jiffies + msecs_to_jiffies(2000);
+    mutex_lock(&cmd_lock);
+    if (waited > 0 && cmd_response[0] != '\0') {
+        strscpy(response, cmd_response, response_size);
+        cmd_pending = false;
+        mutex_unlock(&cmd_lock);
+        mutex_unlock(&cmd_serial_lock);
 
-    while (time_before(jiffies, timeout)) {
-
-        printk(KERN_INFO "LoRaComm: Lendo USB... \n");
-
-        ret = usb_bulk_msg(
-            loracomm_device,
-            usb_rcvbulkpipe(loracomm_device, usb_in),
-            usb_in_buffer,
-            min(usb_max_size, MAX_RECV_LINE),
-            &actual_size,
-            2000
-        );
-
-        printk(KERN_INFO "LoRaComm: USB IN -> ret=%d, actual_size=%d\n", ret, actual_size);
-        if (actual_size > 0) {
-            printk(KERN_INFO "LoRaComm: Dados recebidos: '%.*s'\n", actual_size, usb_in_buffer);
-        }
-
-        if (ret) {
-            printk(KERN_ERR "LoRaComm: Erro ao ler USB Código: %d\n", ret);
-
-            continue;
-        }
-
-        if (actual_size == 0) {
-            continue;
-        }
-
-
-        // Procura uma linha terminada por '\n'
-        for (i = 0; i < actual_size; i++) {
-
-            if (usb_in_buffer[i] == '\n') {
-
-                recv_line[recv_size] = '\0';
-
-                printk(KERN_INFO
-                       "LoRaComm: Linha completa: '%s'\n",
-                       recv_line);
-
-                // bate o prefixo da resposta esperada
-                if (!strncmp(recv_line,
-                             resp_expected,
-                             strlen(resp_expected))) {
-
-                    // pula pra resposta
-                    resp_pos = recv_line +
-                               strlen(resp_expected);
-
-                    if (*resp_pos == ' ')
-                        resp_pos++;
-
-                    // copia conteudo da resposta
-                    strscpy(response,
-                            resp_pos,
-                            response_size);
-
-                    printk(KERN_INFO
-                           "LoRaComm: Resposta aceita: '%s'\n",
-                           response);
-
-                    return 0;
-                }
-
-                /*
-                 * Linha não era a resposta esperada.
-                 */
-                recv_size = 0;
-
-            } else if (recv_size < MAX_RECV_LINE - 1) {
-
-                recv_line[recv_size++] =
-                    usb_in_buffer[i];
-            }
-        }
-
+        printk(KERN_INFO "LoRaComm: Resposta aceita: '%s'\n", response);
+        return 0;
     }
+    cmd_pending = false;
+    mutex_unlock(&cmd_lock);
+    mutex_unlock(&cmd_serial_lock);
 
     printk(KERN_ERR
            "LoRaComm: TIMEOUT - sem resposta para %s\n",
