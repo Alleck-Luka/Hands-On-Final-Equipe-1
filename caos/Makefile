@@ -1,4 +1,4 @@
-obj-m += lora.o
+obj-m += loracomm.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)

@@ -4,6 +4,8 @@
 #include <linux/delay.h>
 #include <linux/wait.h>
 #include <linux/poll.h>
+#include <linux/fs.h>
+#include <linux/err.h>
 #include <linux/miscdevice.h>
 #include <linux/kthread.h>
 #include <linux/completion.h>
