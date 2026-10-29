@@ -1,11 +1,5 @@
 #include "lora_service.h"
 
-#include <cerrno>
-#include <cstring>
-#include <fcntl.h>
-#include <poll.h>
-#include <unistd.h>
-
 namespace aidl::devtitans::lora {
 
     ndk::ScopedAStatus LoraService::connect(int32_t* _aidl_return) {
@@ -84,54 +78,28 @@ namespace aidl::devtitans::lora {
     }
 
     void LoraService::listenLoop() {
-        /*
-         * Nivel 2: em vez de pollar o rx_count a cada 500ms, abrimos o
-         * /dev/loracomm (criado pelo driver) e BLOQUEAMOS no poll(). O driver
-         * faz wake_up() assim que o firmware emite "EVT RX <payload>", entao
-         * a mensagem (string) chega aqui sem polling.
-         */
-        int fd = open("/dev/loracomm", O_RDONLY);
-        if (fd < 0) {
-            LOG(ERROR) << "listenLoop: nao abriu /dev/loracomm: "
-                       << strerror(errno);
-            return;
-        }
-
-        struct pollfd pfd;
-        pfd.fd = fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+        lastCount = this->lora.getRxCount();
 
         while (running.load()) {
-            int pr = poll(&pfd, 1, -1);          // bloqueia ate chegar evento
-            if (pr < 0) {
-                if (errno == EINTR)
-                    continue;
-                LOG(ERROR) << "listenLoop: poll falhou: " << strerror(errno);
-                break;
-            }
-            if (!(pfd.revents & POLLIN))
-                continue;
+            long count = this->lora.getRxCount();
+            if (count != lastCount) {
+                lastCount = count;
+                std::string message = this->lora.getLastRx();
 
-            char msg[256];
-            ssize_t n = read(fd, msg, sizeof(msg) - 1);
-            if (n <= 0)
-                continue;
-            msg[n] = '\0';
+                std::vector<std::shared_ptr<ILoraCallback>> current;
+                {
+                    std::lock_guard<std::mutex> lock(mtx);
+                    current = callbacks;
+                }
 
-            std::vector<std::shared_ptr<ILoraCallback>> current;
-            {
-                std::lock_guard<std::mutex> lock(mtx);
-                current = callbacks;
+                for (const auto& cb : current) {
+                    if (cb != nullptr)
+                        cb->onMessageReceived(message);
+                }
             }
 
-            for (const auto& cb : current) {
-                if (cb != nullptr)
-                    cb->onMessageReceived(msg);   // string direto do driver
-            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
-
-        close(fd);
     }
 
 }

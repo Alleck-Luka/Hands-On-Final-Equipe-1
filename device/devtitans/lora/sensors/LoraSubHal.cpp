@@ -2,9 +2,6 @@
 
 #include "loracomm_lib.h"
 
-#include <cerrno>
-#include <fcntl.h>
-#include <poll.h>
 #include <unistd.h>              // usleep
 #include <utils/SystemClock.h>   // ::android::elapsedRealtimeNano()
 
@@ -64,43 +61,22 @@ Return<Result> LoraSubHal::activate(int32_t /*sensorHandle*/, bool enabled) {
 }
 
 void LoraSubHal::pollLoop() {
-    /*
-     * Nivel 2: em vez de pollar o rx_count a cada 500ms, abrimos o
-     * /dev/loracomm e BLOQUEAMOS no poll(). O driver faz wake_up() assim que
-     * o firmware emite "EVT RX", entao a flag chega ao framework sem polling.
-     */
-    int fd = open("/dev/loracomm", O_RDONLY);
-    if (fd < 0) {
-        return;
-    }
-
-    struct pollfd pfd;
-    pfd.fd = fd;
-    pfd.events = POLLIN;
-    pfd.revents = 0;
+    Loracomm lora;
 
     while (mActive) {
-        int pr = poll(&pfd, 1, -1);          // bloqueia ate chegar evento
-        if (pr < 0) {
-            if (errno == EINTR)
-                continue;
-            break;
+        long count = lora.getRxCount();      // lê /sys/kernel/loracomm/rx_count
+
+        if (count != mLastCount) {           // mensagem nova chegou
+            mLastCount = count;
+            postEvent(1.0f);                 // flag 0 -> 1
+            mPulseActive = true;
+        } else if (mPulseActive) {           // ciclo seguinte sem novidade
+            postEvent(0.0f);                 // flag 1 -> 0 (reset)
+            mPulseActive = false;
         }
-        if (!(pfd.revents & POLLIN))
-            continue;
 
-        char buf[256];
-        ssize_t n = read(fd, buf, sizeof(buf) - 1);
-        if (n <= 0)
-            continue;
-        buf[n] = '\0';
-
-        postEvent(1.0f);                     // flag 0 -> 1 (mensagem chegou)
-        usleep(100000);                      // pulso curto (nao e polling)
-        postEvent(0.0f);                     // reset 1 -> 0
+        usleep(500000);                      // 500 ms
     }
-
-    close(fd);
 }
 
 void LoraSubHal::postEvent(float value) {

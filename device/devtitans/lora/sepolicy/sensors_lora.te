@@ -1,25 +1,4 @@
-# ============================================================================
-# LoRa no Sensors HAL (SubHal) + Nivel 2 (/dev/loracomm)
-# ============================================================================
-
-# O SubHal LoRa roda DENTRO do servico de sensores
-# (android.hardware.sensors-service.multihal, dominio hal_sensors_default).
-# Acesso ao sysfs do driver (/sys/kernel/loracomm) - usado nas consultas
-# sob demanda (rx_count, last_rx).
+# O SubHal LoRa roda DENTRO do serviço de sensores
+# (android.hardware.sensors-service.multihal, domínio hal_sensors_default)
+# e precisa ler /sys/kernel/loracomm (que é do tipo sysfs).
 allow hal_sensors_default sysfs:file { getattr open read };
-
-# ----------------------------------------------------------------------------
-# Nivel 2: /dev/loracomm (misc device do driver loracomm.ko)
-#
-# O driver faz wake_up() quando o firmware emite "EVT RX"; userspace (os dois
-# HALs) bloqueia em poll()/read() nesse dispositivo para receber o evento sem
-# polling.
-# ----------------------------------------------------------------------------
-
-type loracomm_device, dev_type;
-
-# LoRa HAL (AIDL): recebe a STRING da mensagem via onMessageReceived()
-allow lora_daemon loracomm_device:chr_file { open read getattr };
-
-# Sensors HAL (SubHal): recebe o evento para postar a flag numerica
-allow hal_sensors_default loracomm_device:chr_file { open read getattr };
