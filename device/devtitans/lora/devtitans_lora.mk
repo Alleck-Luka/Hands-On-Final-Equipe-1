@@ -21,6 +21,7 @@ PRODUCT_PACKAGES += \
 	lora_service_client \
 	LoRaTile \
 	lora_device_framework_matrix	#Android.bp com a vintf_compatibility_matrix
+	
 
 # ===== MUDANÇA ANDROID 16: framework matrix fica na system_ext agora
 # Device Framework Matrix: o produto PRECISA do serviço ILora/default
@@ -29,5 +30,6 @@ PRODUCT_PACKAGES += \
 # Manager
 PRODUCT_PACKAGES += devtitans.loramanager
 
-# App de teste do Lora (envia/recebe mensagens e troca a senha via HAL)
-PRODUCT_PACKAGES += LoraApp
+# App de teste do Lora (envia/recebe mensagens e troca a senha via HAL) + App hiperion (envia/recebe mensagens via Manager)
+PRODUCT_PACKAGES += LoraApp \
+	Hiperion

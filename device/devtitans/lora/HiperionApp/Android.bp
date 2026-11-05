@@ -1,0 +1,38 @@
+android_app {
+    name: "Hiperion",
+    srcs: [
+        "src/**/*.kt",
+    ],
+    resource_dirs: ["res"],
+    manifest: "AndroidManifest.xml",
+
+    // É um app privilegiado
+    certificate: "platform",
+    privileged: true,
+    platform_apis: true,
+
+    system_ext_specific: true,
+
+    libs: [
+        "devtitans.loramanager",
+    ],
+    required: [
+        "devtitans.loramanager",
+    ],
+
+    static_libs: [
+        "androidx.core_core-ktx",
+        "androidx.activity_activity-compose",
+        "androidx.compose.ui_ui",
+        "androidx.compose.runtime_runtime",       // <-- Adicione esta linha
+        "androidx.compose.foundation_foundation", // <-- Adicione esta linha
+        "androidx.compose.material3_material3",
+        "androidx.compose.material_material-icons-core",
+        "androidx.compose.ui_ui-tooling-preview",
+        "androidx.lifecycle_lifecycle-runtime-ktx",
+    ],
+
+    optimize: {
+        enabled: false,
+    },
+}

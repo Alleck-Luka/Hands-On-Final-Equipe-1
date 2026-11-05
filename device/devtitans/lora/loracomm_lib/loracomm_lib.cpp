@@ -57,7 +57,7 @@ namespace devtitans::loracomm
             return to_string(rxCount);
         }
         else if (file == "last_rx") {
-            return "Mensagem simulada!";
+            return "ID_DO_DISPOSITIVO|Nome do Usuário|Texto da mensagem";
         }
         else if (file == "key") {
             return "123456789";
