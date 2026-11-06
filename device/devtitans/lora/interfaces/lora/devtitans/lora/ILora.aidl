@@ -1,5 +1,7 @@
 package devtitans.lora;
 
+import devtitans.lora.ILoraCallback;
+
 @VintfStability
 interface ILora {
     int connect();
@@ -13,5 +15,7 @@ interface ILora {
     String getLastRx();
     String getKey();
     boolean setKey(in String key);
+    void registerCallback(in ILoraCallback callback);
+    void unregisterCallback(in ILoraCallback callback);
 }
 

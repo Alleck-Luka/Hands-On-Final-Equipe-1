@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 
 import devtitans.lora.ILora;                          // Criado pelo AIDL
+import devtitans.lora.ILoraCallback;                  // Criado pelo AIDL
 
 /*
     ====================================
@@ -131,4 +132,48 @@ public class LoraManager {
         return service.getLastRx();
     }
 
+    public String getKey() throws RemoteException {
+        Log.d(TAG, "Executando método getKey() ...");
+        return service.getKey();
+    }
+
+    public boolean setKey(String key) throws RemoteException {
+        Log.d(TAG, "Executando método setKey(" + key + ") ...");
+        return service.setKey(key);
+    }
+
+    // Callback que o app implementa (sem conhecer AIDL)
+    public interface Listener {
+        void onMessageReceived(String message);
+    }
+
+    private ILoraCallback callback;   // callback AIDL interno
+
+    public void registerListener(final Listener listener) throws RemoteException {
+        callback = new ILoraCallback.Stub() {
+            @Override
+            public void onMessageReceived(String message) {
+                listener.onMessageReceived(message);   // ATENÇÃO: thread do binder!
+            }
+
+            // O ILoraCallback é @VintfStability, então o Stub gerado pelo AIDL
+            // exige os métodos de versão/hash da interface. Como a interface não
+            // tem versão "frozen", usamos os valores padrão.
+            @Override
+            public int getInterfaceVersion() {
+                return 0;
+            }
+
+            @Override
+            public String getInterfaceHash() {
+                return "notfrozen";
+            }
+        };
+        service.registerCallback(callback);
+    }
+
+    public void unregisterListener() throws RemoteException {
+        if (callback != null)
+            service.unregisterCallback(callback);
+    }
 }
