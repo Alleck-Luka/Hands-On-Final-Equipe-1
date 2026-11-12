@@ -1,9 +1,9 @@
 aidl_interface {
-    name:      "devtitans.lora",
-    vendor:    true,
-    srcs:      [ "devtitans/lora/*.aidl" ],
+    name: "devtitans.lora",
+    vendor: true,
+    srcs: ["devtitans/lora/*.aidl"],
     stability: "vintf",
-    owner:     "DevTITANS",
+    owner: "DevTITANS",
     backend: {
         cpp: {
             enabled: true,
@@ -16,4 +16,5 @@ aidl_interface {
             enabled: true,
         },
     },
+    frozen: false,
 }

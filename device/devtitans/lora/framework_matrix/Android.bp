@@ -1,0 +1,9 @@
+// Agora device_framework_matrix precisa estar na system_ext
+vintf_compatibility_matrix {
+    name: "lora_device_framework_matrix",
+    srcs: [
+        "device_framework_matrix.xml",
+    ],
+    system_ext_specific: true,
+}
+

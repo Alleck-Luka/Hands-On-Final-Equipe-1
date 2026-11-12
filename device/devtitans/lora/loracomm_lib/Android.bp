@@ -3,6 +3,10 @@ cc_library {
     srcs:        [ "*.cpp" ],
     export_include_dirs: [ "." ],                       // Exporta o nosso include para os módulos dependem de nós
 
+    shared_libs: [ "libbase" ],                         // Necessário para o GetBoolProperty
+    header_libs: [ "libbase_headers" ],                 // Usa os includes do libbase
+    export_header_lib_headers: ["libbase_headers"],
+
     installable: true,
     vendor:      true
 }

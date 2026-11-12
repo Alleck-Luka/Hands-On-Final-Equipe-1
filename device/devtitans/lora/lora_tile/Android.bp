@@ -5,9 +5,19 @@ android_app {
         "src/**/*.java",
     ],
 
+    certificate: "platform",
+    privileged: true,
+
     resource_dirs: [
         "res",
     ],
 
+    libs: [
+        "devtitans.loramanager",
+    ],
+
+    required: [ "devtitans.loramanager" ],
+
     platform_apis: true,
+    system_ext_specific: true,
 }
