@@ -83,7 +83,7 @@ via rádio LoRa** e **definir uma senha de comunicação** para o dispositivo.
 
 
 Você consegue o firmware utilizado no projeto dentro de:
-`caos/firmware_lora_rx_tx_aes_get_set_key.ino`
+`misc/firmware_lora_rx_tx_aes_get_set_key.ino`
 Dependendo da configuração do dispositivo que você utilizar, os pinos podem mudar de posição,
 portanto é recomendável que você saiba alterar isso no código acima.
 Os periféricos utilizados foram um Esp32 devkit1 e um LoRa Ebyte32.
