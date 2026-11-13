@@ -184,7 +184,7 @@ Adicione a seguinte linha no final do arquivo:
 
 ### Validação completa (com o ESP32/LoRa conectados)
 
-1. **Preparar o hardware** — ESP32 + rádio E32 ligados e conectados por **cabo de dados** na máquina do emulador; nada segurando a serial (Arduino IDE/`screen`/`picocom` fechados):
+<!-- 1. **Preparar o hardware** — ESP32 + rádio E32 ligados e conectados por **cabo de dados** na máquina do emulador; nada segurando a serial (Arduino IDE/`screen`/`picocom` fechados):
 ```bash
 lsusb | grep -i 10c4          # deve mostrar o CP2102 (10c4:ea60)
 ls -l /dev/ttyUSB*
@@ -206,8 +206,11 @@ adb shell dmesg | grep -i loracomm     # espera: "LoRaComm: === DISPOSITIVO CONE
 adb shell ls /sys/kernel/loracomm      # espera: aux key last_rx ping rx_count send
 ```
 > O diretório `/sys/kernel/loracomm` só é criado no `usb_probe`. Se você deu `insmod` antes do device aparecer no USB, rode `adb shell rmmod loracomm && adb shell insmod /data/local/tmp/loracomm.ko`.
+ -->
 
-4. **Testar direto no sysfs** (comandos do device entre aspas simples, para o redirecionamento acontecer dentro do Android):
+Com o dispositivo emulado (ou conectado via adb wireless):
+ 
+1. **Testar direto no sysfs** (comandos do device entre aspas simples, para o redirecionamento acontecer dentro do Android):
 ```bash
 adb shell cat /sys/kernel/loracomm/ping                        # 1 (PONG recebido)
 adb shell cat /sys/kernel/loracomm/aux                         # 1 = modo RX / 0 = TX
@@ -218,7 +221,7 @@ adb shell 'echo minhasenha > /sys/kernel/loracomm/key'         # SET_KEY
 adb shell cat /sys/kernel/loracomm/key                         # minhasenha (GET_KEY)
 ```
 
-5. **Cliente sysfs (`loracomm_client`)**:
+2. **Cliente sysfs (`loracomm_client`)**:
 ```bash
 adb shell /vendor/bin/loracomm_client ping                     # Ping enviado!
 adb shell /vendor/bin/loracomm_client get-aux                  # Dispositivo em modo de RX! / ...TX!
@@ -229,7 +232,7 @@ adb shell /vendor/bin/loracomm_client set-key minhasenha       # Key atualizada:
 adb shell /vendor/bin/loracomm_client get-key                  # Key atual do dispositivo: minhasenha
 ```
 
-6. **Cliente binder (`lora_service_client`)** — os 8 métodos do AIDL:
+3. **Cliente binder (`lora_service_client`)** — os 8 métodos do AIDL:
 ```bash
 adb shell /vendor/bin/lora_service_client connect              # Dispositivo conectado!
 adb shell /vendor/bin/lora_service_client ping                 # Ping enviado!
@@ -242,7 +245,7 @@ adb shell /vendor/bin/lora_service_client set-key novaSenha    # Key atualizada:
 adb shell ps -ef | grep -v grep | grep lora-service            # daemon continua rodando
 ```
 
-7. **Via `service call`** (transaction codes: 1=connect, 2=send, 3=ping, 4=getAux, 5=getRxCount, 6=getLastRx, 7=getKey, 8=setKey):
+4. **Via `service call`** (transaction codes: 1=connect, 2=send, 3=ping, 4=getAux, 5=getRxCount, 6=getLastRx, 7=getKey, 8=setKey):
 ```bash
 adb shell service call devtitans.lora.ILora/default 1                  # connect    → 00000001
 adb shell service call devtitans.lora.ILora/default 2 s16 "ola"        # send       → 00000001
@@ -254,19 +257,19 @@ adb shell service call devtitans.lora.ILora/default 7                  # getKey
 adb shell service call devtitans.lora.ILora/default 8 s16 "x"          # setKey
 ```
 
-8. **App `LoraApp`** (no emulador):
+5. **App `LoraApp`**:
 - Status deve mostrar **"Conectado"**;
 - **Enviar**: digite a mensagem e clique em *Enviar* → toast "Mensagem enviada!";
 - **Receber**: com um **segundo nó LoRa** transmitindo, "Mensagens recebidas" e "Última mensagem" atualizam automaticamente (polling de 1 s);
 - **Trocar senha**: digite a nova senha e clique em *Trocar senha* → toast "Senha alterada!" e o campo "Key atual" exibe a nova senha.
 
-9. **Checagens finais**:
+6. **Checagens finais**:
 ```bash
 adb shell ps -ef | grep -v grep | grep lora-service            # daemon rodando (sem crash)
 adb shell ps -Z | grep loraapp                                 # u:r:platform_app:s0
 adb shell logcat -d | grep 'avc: denied' | grep -i lora        # deve sair vazio
 ```
-
+<!--
 > Limitação conhecida: a `key` fica apenas em memória no ESP32 — o `GET_KEY` retorna o valor após o `SET_KEY`, mas ela volta a ser vazia se o ESP32 for reiniciado (o firmware atual não grava a senha em flash).
 
 ### Validação parcial (sem o dispositivo)
@@ -319,6 +322,8 @@ adb shell ps -Z | grep loraapp          # u:r:platform_app:s0
 ```bash
 adb shell logcat -d | grep 'avc: denied' | grep -i lora   # não deve aparecer nada
 ```
+
+-->
 
 ## Contato
 
